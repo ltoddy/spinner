@@ -2,21 +2,30 @@ package spinner
 
 import (
 	"fmt"
-	"github.com/ltoddy/spinner/internal"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ltoddy/spinner/internal"
 )
 
 type Spinner struct {
 	lock      sync.RWMutex
 	condition bool
+
+	text     string
+	frames   []string
+	interval time.Duration
 }
 
 func NewSpinner() *Spinner {
 	return &Spinner{
 		condition: false,
+
+		text:     defaultText,
+		frames:   defaultFrames,
+		interval: defaultInterval,
 	}
 }
 
@@ -24,12 +33,13 @@ func (s *Spinner) Start() {
 	go func() {
 		stdout := os.Stdout
 
-		for v := range internal.Cycle([]string{"|", "/", "-", "\\"}) {
-			status := []byte(fmt.Sprintf("%s computing.", v))
+		for v := range internal.Cycle(s.frames) {
+			status := []byte(fmt.Sprintf("  %s %s.", v, s.text))
 			_, _ = stdout.Write(status)
 			_ = stdout.Sync()
 			_, _ = stdout.Write([]byte(strings.Join(internal.Repeat(len(status), "\x08"), "")))
-			time.Sleep(time.Millisecond * 100)
+
+			time.Sleep(s.interval)
 
 			s.lock.RLock()
 			condition := s.condition
